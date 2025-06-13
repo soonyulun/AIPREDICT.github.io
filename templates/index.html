@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ ticker }} Stock Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        .card-header {
+            font-weight: bold;
+        }
+        .action-card {
+            border-left: 5px solid;
+        }
+        .bg-action-success {
+            border-left-color: #198754;
+        }
+        .bg-action-warning {
+            border-left-color: #ffc107;
+        }
+        .bg-action-danger {
+            border-left-color: #dc3545;
+        }
+        .plot-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .indicator-card {
+            height: 100%;
+        }
+        .last-updated {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <header class="pb-3 mb-4 border-bottom">
+            <div class="d-flex align-items-center text-decoration-none">
+                <i class="bi bi-graph-up me-2" style="font-size: 2rem;"></i>
+                <span class="fs-4 fw-bold">{{ ticker }} Stock Analysis</span>
+            </div>
+            <div class="last-updated mt-1">Last updated: {{ last_updated }}</div>
+        </header>
+
+        <!-- Recommendation Card -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card action-card bg-action-{{ recommendation.action_color }} mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h2 class="card-title mb-1">
+                                    <i class="bi {{ recommendation.action_icon }}"></i> 
+                                    {{ recommendation.action }}
+                                </h2>
+                                <p class="card-text mb-1">{{ recommendation.reason }}</p>
+                                {% if recommendation.prediction_available %}
+                                <small class="text-muted">Model Confidence: {{ recommendation.confidence }} (R² = {{ recommendation.model_r2 }})</small>
+                                {% endif %}
+                            </div>
+                            <div class="text-end">
+                                <h3 class="mb-1">${{ recommendation.current_price }}</h3>
+                                {% if recommendation.prediction_available %}
+                                <p class="mb-0">
+                                    <span class="badge bg-{{ 'success' if recommendation.price_change|float > 0 else 'danger' }}">
+                                        {{ recommendation.price_change }}
+                                    </span>
+                                    <small class="text-muted">in {{ prediction_days }} days</small>
+                                </p>
+                                <small>Predicted: ${{ recommendation.predicted_price }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plot -->
+        <div class="plot-container mb-4">
+            <img src="data:image/png;base64,{{ plot_data }}" class="img-fluid" alt="Stock Analysis Plot">
+        </div>
+
+        <!-- Indicators -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card indicator-card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-speedometer2 me-2"></i>Trend Indicators
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <span>Current Trend:</span>
+                            <strong class="text-{{ 'success' if recommendation.trend == 'Bullish' else 'danger' }}">
+                                {{ recommendation.trend }}
+                            </strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>50-Day EMA:</span>
+                            <strong>${{ recommendation.ema_50 }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>200-Day SMA:</span>
+                            <strong>${{ recommendation.sma_200 }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <div class="card indicator-card">
+                    <div class="card-header bg-info text-white">
+                        <i class="bi bi-activity me-2"></i>Momentum Indicators
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <span>RSI (14):</span>
+                            <strong>{{ recommendation.rsi }}
+                                <span class="badge bg-{{ 'danger' if recommendation.rsi|float > 70 else 'success' if recommendation.rsi|float < 30 else 'warning' }}">
+                                    {{ 'Overbought' if recommendation.rsi|float > 70 else 'Oversold' if recommendation.rsi|float < 30 else 'Neutral' }}
+                                </span>
+                            </strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>MACD:</span>
+                            <strong class="text-{{ 'success' if recommendation.macd_signal == 'Bullish' else 'danger' }}">
+                                {{ recommendation.macd }} ({{ recommendation.macd_signal }})
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4 mb-3">
+                <div class="card indicator-card">
+                    <div class="card-header bg-secondary text-white">
+                        <i class="bi bi-bar-chart-line me-2"></i>Prediction Model
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <span>Model Confidence:</span>
+                            <strong>{{ recommendation.confidence }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>R² Score:</span>
+                            <strong>{{ recommendation.model_r2 }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Prediction Window:</span>
+                            <strong>{{ prediction_days }} days</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="pt-3 mt-4 text-muted border-top">
+            <small>Stock analysis tool - For educational purposes only. Not financial advice.</small>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
